@@ -478,41 +478,88 @@ def set_locality(df, **data_dict):
         df['healthfacility']=(df.filter([k for k in data_dict['healthfacility_dic']], axis=1)
                                .apply(lambda x: max(x.dropna()) if x.dropna().any() else np.nan, axis=1))
 
-def extract_villages(dict_path, anc_path, country, out_path):
+## Deprecated - only works for Kenya - see the below one
+# def extract_villages(dict_path, anc_path, country, out_path):
     
-    data_dict=pd.read_csv(dict_path, index_col=0)
+#     data_dict=pd.read_csv(dict_path, index_col=0)
     
-    # creating a nested dictionary containing dictionaries of the localities        
-    prefixes= ['f2_ke_v', 'f2_ke_chu', 'f2_ke_link', 'f2_ke_county', 'f2_ke_sub_county', 'f2_ke_health']
-    final_dictionary = []
-    for p in prefixes:
-        final_dictionary.append(data_dict.filter(like=p, axis=0)[['select_choices_or_calculations']]
-                                .apply(remap, axis=1)[['localities']]
-                                .dropna().to_dict()['localities'])
+#     # creating a nested dictionary containing dictionaries of the localities        
+#     prefixes= ['f2_ke_v', 'f2_ke_chu', 'f2_ke_link', 'f2_ke_county', 'f2_ke_sub_county', 'f2_ke_health']
+#     final_dictionary = []
+#     for p in prefixes:
+#         final_dictionary.append(data_dict.filter(like=p, axis=0)[['select_choices_or_calculations']]
+#                                 .apply(remap, axis=1)[['localities']]
+#                                 .dropna().to_dict()['localities'])
         
-    # allocating dictionary names for each dictionary 
-    names = ['village_dic', 'chu_dic', 'linkfacility_dic', 'county_dic', 'subcounty_dic', 'healthfacility_dic']
-    data_dict= dict(zip(names,final_dictionary))
+#     # allocating dictionary names for each dictionary 
+#     names = ['village_dic', 'chu_dic', 'linkfacility_dic', 'county_dic', 'subcounty_dic', 'healthfacility_dic']
+#     data_dict= dict(zip(names,final_dictionary))
     
+#     #code to run for all the 3 visits at the same time.
+#     for i in range(1, 4):
+#         anc_df=pd.read_csv(os.path.join(anc_path, r'Visit{}_v2.csv'.format(i)))        
+#         anc_df=set_locality(anc_df, **data_dict)
+        
+#         #dealing with villages from the 'other_name_column'
+#         #subsetting the dataset to get the extracted localities columns and the other name columns
+#         df_loca = anc_df[['f2_ke_vfg_other_name','village', 'f2_ke_chu_other_name', 'chu', 'f2_ke_link_facility_other_name', 'linkfacilities', 'f2_ke_county_other_name', 'counties', 'f2_ke_sub_county_other_name', 'subcounties']]
+
+#         #grouping the columns to be merged together in pairs
+#         pairs =[df_loca.columns[0:2], df_loca.columns[2:4], df_loca.columns[4:6], df_loca.columns[6:8], df_loca.columns[8:10]]
+#         pairs['counties'].replace('Other', np.nan, inplace=True)
+
+#         #applying the merge function to all the pairs
+#         df_final = []
+#         for item in pairs:
+#             df_final.append(df_loca[item].apply(lambda x:" ".join(x.dropna(). astype(str)),axis = 1))
+#             localities = pd.DataFrame(df_final).rename(index = {0:'villages', 1:'chu', 2:'link_facilities', 3:'sub_county`s', 4:'county`s' }).T
+            
+#         anc_df.to_csv(os.path.join(out_path, r'Visit{}_v2.csv'.format(i)))
+        
+def extract_villages(dict_path, anc_path, country, out_path, neigh_path):    
+    #function for mapping locality codes to string names
+    def remap(row, prefix):
+        if isinstance(row['select_choices_or_calculations'], str):
+            localities=dict()
+            for locality in row['select_choices_or_calculations'].split('|'):
+                k, *v=locality.split(',')
+                localities[int(k)]=','.join(v) if isinstance(v, list) else v.strip()
+            row[prefix]=localities
+        else:
+            #dealing with villages in 'dont know' columns
+            row[prefix]={0: np.nan, 1: np.nan}
+        return row    
+    #function for collapsing individual localities into single column
+    def set_locality(df, **data_dict):
+        for key, value in data_dict.items():
+            for k, v in value.items():
+                if not k.endswith('other_name') and k in df.columns:
+                    df[k]=df[k].map(v)
+            df[key]=(df.filter([k for k in data_dict[key].keys()], axis=1)
+                      .apply(lambda x: max(x.dropna()) if x.dropna().any() else np.nan, axis=1))
+        return df
+    
+    data_dict=pd.read_csv(dict_path, index_col=0) 
+    # creating a nested dictionary containing dictionaries of the localities        
+    prefixes=['f2_ke_v', 'f2_ke_chu', 'f2_ke_link', 'f2_ke_county', 'f2_ke_sub_county', 'f2_ke_health']
+    # prefixes=['f2_mz_n', 'f2_mz_loc', 'f2_mz_admin', 'f2_mz_health']
+    final_dictionary=dict()
+    for p in prefixes:
+        final_dictionary.update(data_dict.filter(like=p, axis=0)[["select_choices_or_calculations"]]
+                                .apply(lambda x: remap(x, p), axis=1)[[p]]
+                                .to_dict())   
+        
+    neighborhood_codes=pd.read_csv(neigh_path)     
     #code to run for all the 3 visits at the same time.
     for i in range(1, 4):
-        anc_df=pd.read_csv(os.path.join(anc_path, r'Visit{}_v2.csv'.format(i)))        
-        anc_df=set_locality(anc_df, **data_dict)
-        
-        #dealing with villages from the 'other_name_column'
-        #subsetting the dataset to get the extracted localities columns and the other name columns
-        df_loca = anc_df[['f2_ke_vfg_other_name','village', 'f2_ke_chu_other_name', 'chu', 'f2_ke_link_facility_other_name', 'linkfacilities', 'f2_ke_county_other_name', 'counties', 'f2_ke_sub_county_other_name', 'subcounties']]
-
-        #grouping the columns to be merged together in pairs
-        pairs =[df_loca.columns[0:2], df_loca.columns[2:4], df_loca.columns[4:6], df_loca.columns[6:8], df_loca.columns[8:10]]
-        pairs['counties'].replace('Other', np.nan, inplace=True)
-
-        #applying the merge function to all the pairs
-        df_final = []
-        for item in pairs:
-            df_final.append(df_loca[item].apply(lambda x:" ".join(x.dropna(). astype(str)),axis = 1))
-            localities = pd.DataFrame(df_final).rename(index = {0:'villages', 1:'chu', 2:'link_facilities', 3:'sub_county`s', 4:'county`s' }).T
-            
+        anc_df=pd.read_csv(os.path.join(anc_path, r'Visit{}_v2.csv'.format(i))) 
+        # anc_df=(set_locality(anc_df)
+        #        .rename(columns={'f2_mz_n': 'f2_mz_village'}))
+        anc_df=(set_locality(anc_df, **final_dictionary)
+                .rename(columns={'f2_ke_v': 'f2_ke_village', 'f2_ke_link': 'f2_ke_link_facility', 'f2_ke_health': 'f2_ke_health_facility'}))
+                # .rename(columns={'f2_mz_n': 'f2_mz_nbr', 'f2_mz_health': 'f2_mz_health_facility'})
+                # .merge(neighborhood_codes, on=['f2_mz_nbr', 'f2_mz_loc', 'f2_mz_admin'], how='left', validate='m:m'))   
         anc_df.to_csv(os.path.join(out_path, r'Visit{}_v2.csv'.format(i)))
+    return
         
 
