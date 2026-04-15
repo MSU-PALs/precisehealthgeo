@@ -41,7 +41,11 @@ def extreme_heat_days(data_source: str, spatial_level: str) -> pd.DataFrame:
         "hd_p95": 0.95,
     }  # moderate, high and extreme heat days
 
-    for country in ["Gambia"]:
+    for country in [
+        "Gambia",
+        "Kenya",
+        "Mozambique",
+    ]:
         # filter anc data for country
         women = anc_data[anc_data["Country"] == country]
 
@@ -100,8 +104,6 @@ def extreme_heat_days(data_source: str, spatial_level: str) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    for data_source in [
-        "ERA-5",
-    ]:  # "MERRA-2"]:
+    for data_source in ["ERA-5", "MERRA-2"]:
         for spatial_level in ["village", "centroid", "facility"]:
             extreme_heat_days(data_source, spatial_level)

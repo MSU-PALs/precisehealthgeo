@@ -11,6 +11,9 @@ anc_data = pd.read_csv(os.path.join(data_dir, r"anc_daily_attendance.csv"))
 anc_data["exposure_day"] = pd.to_datetime(
     anc_data["exposure_day"], format="%Y-%m-%d", errors="coerce"
 )
+### problem ids: '254-60115', '254-92697' don't have facility_id
+### drop them until we can resolve with Rutendo
+anc_data = anc_data[~anc_data["f2a_participant_id"].isin(["254-60115", "254-92697"])]
 
 
 ############################################################################################################
@@ -44,7 +47,7 @@ def heat_wave_exposure(data_source: str, spatial_level: str) -> pd.DataFrame:
     # heatwave duration threshold (number of consecutive hot days)
     duration = dict(zip(["a", "b", "c"], range(2, 5)))  # 2 - 4 days
 
-    for country in ["Gambia"]:
+    for country in ["Gambia", "Kenya", "Mozambique"]:
         # filter anc data for country
         women = anc_data[anc_data["Country"] == country]
 
@@ -131,8 +134,6 @@ def heat_wave_exposure(data_source: str, spatial_level: str) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    for data_source in [
-        "ERA-5",
-    ]:  # "MERRA-2"]:
+    for data_source in ["ERA-5", "MERRA-2"]:
         for spatial_level in ["village", "centroid", "facility"]:
             heat_wave_exposure(data_source, spatial_level)
