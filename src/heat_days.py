@@ -1,6 +1,5 @@
 import os
 import pandas as pd
-import numpy as np
 from DataAnalyst_v4.heat import Heat
 
 data_dir = r"../data/interim/"
@@ -104,6 +103,6 @@ def extreme_heat_days(data_source: str, spatial_level: str) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    for data_source in ["ERA-5", "MERRA-2"]:
+    for data_source in ["ERA-5", "MERRA-2", "Dewpoint"]:
         for spatial_level in ["village", "centroid", "facility"]:
             extreme_heat_days(data_source, spatial_level)

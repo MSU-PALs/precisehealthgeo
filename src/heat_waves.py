@@ -39,9 +39,9 @@ def heat_wave_exposure(data_source: str, spatial_level: str) -> pd.DataFrame:
 
     # extreme heat definitions based on exposure percentiles
     percentiles = {
-        "hd1": 0.75,
-        "hd2": 0.90,
-        "hd3": 0.95,
+        "hw1": 0.75,
+        "hw2": 0.90,
+        "hw3": 0.95,
     }  # moderate, high, extreme heat days
 
     # heatwave duration threshold (number of consecutive hot days)
@@ -134,6 +134,6 @@ def heat_wave_exposure(data_source: str, spatial_level: str) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    for data_source in ["ERA-5", "MERRA-2"]:
+    for data_source in ["ERA-5", "MERRA-2", "Dewpoint"]:
         for spatial_level in ["village", "centroid", "facility"]:
             heat_wave_exposure(data_source, spatial_level)
